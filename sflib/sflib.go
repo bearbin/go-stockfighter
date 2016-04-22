@@ -34,3 +34,15 @@ func NewClient(apiToken string) *Client {
 
 	return &Client{client: http.DefaultClient, BaseURL: parsedBaseURL, userAgent: userAgent, APIToken: apiToken}
 }
+
+// Call simply sends a HTTP request
+func (c *Client) Call(method string, endpoint string, data string) {
+	// Create the HTTP request.
+	req, err := http.NewRequest(method, c.BaseURL+endpoint, nil)
+
+	// Add authorisation header with API token.
+	req.Header.Add("X-Starfighter-Authorization", c.APIToken)
+
+	// Do the request.
+	response, err := c.client.Do(req)
+}
