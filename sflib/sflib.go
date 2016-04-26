@@ -1,8 +1,8 @@
 package sflib
 
 import (
-	"net/http"
 	"io"
+	"net/http"
 )
 
 const (
@@ -10,7 +10,7 @@ const (
 	defaultUserAgent = "bearbin-sflib/" + libraryVersion
 
 	// Default Base URL for the API
-	baseURL = "https://api.stockfighter.io/ob/api/"
+	baseURL = "https://api.stockfighter.io/"
 )
 
 // A Client manages the connection with the stockfighter API.
@@ -36,7 +36,7 @@ func NewClient(apiToken string) *Client {
 // Call simply sends a HTTP request
 func (c *Client) call(method string, endpoint string, data io.Reader) (*io.ReadCloser, error) {
 	// Create the HTTP request.
-	requestPath := c.BaseURL+endpoint
+	requestPath := c.BaseURL + endpoint
 	req, err := http.NewRequest(method, requestPath, nil)
 	if data != nil {
 		req, err = http.NewRequest(method, requestPath, data)
@@ -45,6 +45,9 @@ func (c *Client) call(method string, endpoint string, data io.Reader) (*io.ReadC
 	if err != nil {
 		return nil, err
 	}
+
+	// Set the user agent.
+	req.Header.Set("User-Agent", c.UserAgent)
 
 	// Add authorisation header with API token.
 	req.Header.Add("X-Starfighter-Authorization", c.APIToken)
