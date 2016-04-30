@@ -1,7 +1,7 @@
 /*
 Package sflib provides a client for using the Stockfighter API.
 
-Getting Started
+Getting started with sflib is simple:
 
 	client := sflib.NewClient("APIKey")
 
@@ -9,15 +9,15 @@ Getting Started
 	err := client.Heartbeat()
 
 This package requires an API key. You can fetch the key from your Stockfighter
-[account page](https://www.stockfighter.io/ui/api_keys), or, if you wish you may
+account page (https://www.stockfighter.io/ui/api_keys), or, if you wish you may
 use your session key, which will be destroyed when you log out.
 
 Spoilers
 
-This package is not intended to spoil your fun. This package simply implements the
-API as documented on the [Stockfighter site](https://starfighter.readme.io), and
-any special features that you require for specific levels will have to be implemented
-on your own.
+This package is not intended to spoil your fun. This package simply implements
+the API as documented on the Stockfighter documentation site (https://starfighter.readme.io),
+and any special features that you require for specific levels will have to be
+implemented on your own.
 
 Your own Work
 
