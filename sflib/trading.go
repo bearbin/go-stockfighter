@@ -6,13 +6,15 @@ import (
 	"fmt"
 )
 
-// HeartbeatResponse is the response to a heartbeat API call.
+// HeartbeatResponse is the response to a Heartbeat API call.
+// It simply informs the user if the API is up and functioning correctly.
 type HeartbeatResponse struct {
 	APIStatusResponse
 }
 
 // Heartbeat checks to make sure that the API is up and operational.
-// If the API is up, true will be returned.
+// If the API is not functioning correctly an informative APIFailureError will
+// be returned.
 func (c *Client) Heartbeat() error {
 	// Call the API.
 	data, err := c.call("GET", "ob/api/heartbeat", nil)
@@ -37,7 +39,9 @@ func (c *Client) Heartbeat() error {
 	return nil
 }
 
-// VenueHeartbeatResponse is the response to the VenueHeartbeat method of the SF API.
+// VenueHeartbeatResponse is the responsefor the VenueHeartbeat method.
+// In addition to the APIStatusResponse it only contains the venue which the
+// check was performed on.
 type VenueHeartbeatResponse struct {
 	APIStatusResponse
 	Venue string `json:"venue"`
@@ -117,9 +121,9 @@ type StockOrdersResponse struct {
 }
 
 // StockOrders gets the orders for the specified stock on the specified exchange (venue).
-func (c *Client) StockOrders(venue string, stock string) (*StockOrdersResponse, error) {
+func (c *Client) StockOrders(venue string, symbol string) (*StockOrdersResponse, error) {
 	// Call the API.
-	endpoint := fmt.Sprintf("/ob/api/venues/%s/stocks/%s", venue, stock)
+	endpoint := fmt.Sprintf("/ob/api/venues/%s/stocks/%s", venue, symbol)
 	data, err := c.call("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -172,7 +176,7 @@ type StockOrderResponse struct {
 func (c *Client) StockOrder(
 	account string,
 	venue string,
-	stock string,
+	symbol string,
 	price int,
 	quantity int,
 	direction string,
@@ -183,7 +187,7 @@ func (c *Client) StockOrder(
 	err := json.NewEncoder(req).Encode(map[string]interface{}{
 		"account":   account,
 		"venue":     venue,
-		"stock":     stock,
+		"stock":     symbol,
 		"price":     price,
 		"qty":       quantity,
 		"direction": direction,
@@ -191,7 +195,7 @@ func (c *Client) StockOrder(
 	})
 
 	// Call the API.
-	endpoint := fmt.Sprintf("ob/api/venues/%s/stocks/%s/orders", venue, stock)
+	endpoint := fmt.Sprintf("ob/api/venues/%s/stocks/%s/orders", venue, symbol)
 	data, err := c.call("POST", endpoint, req)
 	if err != nil {
 		return nil, err
@@ -242,9 +246,9 @@ type StockQuoteResponse struct {
 }
 
 // StockQuote gets a quote for the specified stock on the specified excnange.
-func (c *Client) StockQuote(venue string, stock string) (*StockQuoteResponse, error) {
+func (c *Client) StockQuote(venue string, symbol string) (*StockQuoteResponse, error) {
 	// Call the API.
-	endpoint := fmt.Sprintf("/ob/api/venues/%s/stocks/%s/quote", venue, stock)
+	endpoint := fmt.Sprintf("/ob/api/venues/%s/stocks/%s/quote", venue, symbol)
 	data, err := c.call("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -267,10 +271,8 @@ func (c *Client) StockQuote(venue string, stock string) (*StockQuoteResponse, er
 	return response, nil
 }
 
-// OrderStatusResponse is the response returned by the StockFighter API giving
-// the status of an order.
-type OrderStatusResponse struct {
-	APIStatusResponse
+// Type OrderStatus is the status of an order.
+type OrderStatus struct {
 	Stock
 	// Buy or Sell
 	Direction           string `json:"direction"`
@@ -287,11 +289,18 @@ type OrderStatusResponse struct {
 	Fills       []Fill
 }
 
-// OrderStatus gets the status for a given order in a given stock on the specified
-// exchange.
-func (c *Client) OrderStatus(venue string, stock string, id int) (*OrderStatusResponse, error) {
+// OrderStatusResponse is the response returned by the StockFighter API giving
+// the status of an order.
+type OrderStatusResponse struct {
+	APIStatusResponse
+	OrderStatus
+}
+
+// OrderStatus gets the status for a given order in a given stock on the
+// specified exchange.
+func (c *Client) OrderStatus(venue string, symbol string, id int) (*OrderStatusResponse, error) {
 	// Call the API.
-	endpoint := fmt.Sprintf("/ob/api/venues/%s/stocks/%s/orders/%d", venue, stock, id)
+	endpoint := fmt.Sprintf("/ob/api/venues/%s/stocks/%s/orders/%d", venue, symbol, id)
 	data, err := c.call("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -315,9 +324,9 @@ func (c *Client) OrderStatus(venue string, stock string, id int) (*OrderStatusRe
 }
 
 // OrderCancel cancels the given order, then returns the status of the order.
-func (c *Client) OrderCancel(venue string, stock string, id int) (*OrderStatusResponse, error) {
+func (c *Client) OrderCancel(venue string, symbol string, id int) (*OrderStatusResponse, error) {
 	// Call the API.
-	endpoint := fmt.Sprintf("/ob/api/venues/%s/stocks/%s/orders/%d", venue, stock, id)
+	endpoint := fmt.Sprintf("/ob/api/venues/%s/stocks/%s/orders/%d", venue, symbol, id)
 	data, err := c.call("DELETE", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -325,6 +334,65 @@ func (c *Client) OrderCancel(venue string, stock string, id int) (*OrderStatusRe
 
 	// Unmarshal the JSON response.
 	response := &OrderStatusResponse{}
+	err = json.NewDecoder(*data).Decode(response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the request completed successfully.
+	err = response.CheckAPIStatus()
+	if err != nil {
+		return nil, err
+	}
+
+	// If nothing failed, then return the response.
+	return response, nil
+}
+
+// VenueOrdersResponse is the response to a VenueOrders call.
+type VenueOrdersResponse struct {
+	APIStatusResponse
+	Venue string `json:"venue"`
+	Orders []OrderStatus `json:"orders"`
+}
+
+// VenueOrdersStatus gets the status for all orders on the specified exchange.
+func (c *Client) VenueOrdersStatus(venue string, account string) (*VenueOrdersResponse, error) {
+	// Call the API.
+	endpoint := fmt.Sprintf("/ob/api/venues/%s/accounts/%s/orders", venue, account)
+	data, err := c.call("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the JSON response.
+	response := &VenueOrdersResponse{}
+	err = json.NewDecoder(*data).Decode(response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the request completed successfully.
+	err = response.CheckAPIStatus()
+	if err != nil {
+		return nil, err
+	}
+
+	// If nothing failed, then return the response.
+	return response, nil
+}
+
+// StockOrdersStatus gets the status for all orders on the specified exchange/stock.
+func (c *Client) StockOrdersStatus(venue string, account string, symbol string) (*VenueOrdersResponse, error) {
+	// Call the API.
+	endpoint := fmt.Sprintf("/ob/api/venues/%s/accounts/%s/stocks/%s/orders", venue, account, symbol)
+	data, err := c.call("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the JSON response.
+	response := &VenueOrdersResponse{}
 	err = json.NewDecoder(*data).Decode(response)
 	if err != nil {
 		return nil, err

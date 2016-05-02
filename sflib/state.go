@@ -7,47 +7,48 @@ package sflib
 // Update the list of orders every few seconds. Update the stock and cash
 // balances accordingly.
 
-type stateOrder struct {
-	Venue           string
-	ID              int
-	SharesAccounted int
-}
+import (
+	"sync"
+	"time"
+)
 
 type stateStock struct {
-	Venue        string
-	Symbol       string
+	Stock
 	ShareBalance int
+	OutstandingBalance int
 }
 
 // State maintains and updates state.
 type State struct {
 	client      *Client
-	CashBalance map[string]int
-	Stocks      []stateStock
-	Orders      []stateOrder
+	account string
+	Stocks      []*stateStock
+	mux sync.Mutex
 }
 
-// BuyStock buys a stock.
-func (s *State) BuyStock(
-	account string,
-	venue string,
-	stock string,
-	price int,
-	quantity int,
-	direction string,
-	orderType string,
-) (*StockOrderResponse, error) {
-	// Do the request.
-	resp, err := s.client.StockOrder(account, venue, stock, price, quantity, direction, orderType)
-	if err != nil {
-		return nil, err
-	}
+// Track adds a stock to the list of stocks to track.
+func (s *State) Track(venue string, symbol string) error {
+	state.Stocks = append(state.Stocks, &stateStock{Venue: venue, Symbol: string})
+}
 
-	// Add the returned information to the state.
-	State.Orders = append(Stocks.Orders, struct{})
+// Update updates the stocks every 5 seconds.
+func (s *State) Update() {
+	for {
+		for i, stock := range s.Stocks {
+			fmt.Println("Updating ", stock.Symbol)
+			resp, err := s.client.StockOrdersStatus(stock.Venue, stock.Symbol)
+			if err != nil {
+				panic(err)
+			}
+
+		}
+		time.Sleep(5 * time.Second)
+	}
 }
 
 // NewState creates a new State object.
-func NewState(c *Client) *State {
-	return &State{client: c}
+func NewState(c *Client, account string) *State {
+	s := &State{client: c, account: account}
+	go s.Update()
+	return s
 }

@@ -7,10 +7,10 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-func level2(cli *cli.Context, api *sflib.Client) {
+func level2(cli *cli.Context, api *sflib.Client) error {
 	info, err := api.LevelStart("chock_a_block")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	// Sleep for 5 seconds to allow the instance to warm up.
@@ -22,4 +22,5 @@ func level2(cli *cli.Context, api *sflib.Client) {
 	time.Sleep(10 * time.Second)
 	// Clean everything up.
 	api.LevelStop(info.InstanceID)
+	return nil
 }

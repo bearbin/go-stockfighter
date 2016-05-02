@@ -14,6 +14,8 @@ const (
 )
 
 // A Client manages the connection with the stockfighter API.
+// It is recommended to use NewClient to get a new Client object with sensible
+// default values.
 type Client struct {
 	// Well, we need a HTTP client at least.
 	client *http.Client
@@ -33,7 +35,9 @@ func NewClient(apiToken string) *Client {
 	return &Client{client: http.DefaultClient, BaseURL: baseURL, UserAgent: defaultUserAgent, APIToken: apiToken}
 }
 
-// Call simply sends a HTTP request
+// call sends a request to the APi.
+// It uses the specified method, endpoint and data, and uses the Base URL, User
+// Agent and API token from the Client object it is associated with.
 func (c *Client) call(method string, endpoint string, data io.Reader) (*io.ReadCloser, error) {
 	// Create the HTTP request.
 	requestPath := c.BaseURL + endpoint

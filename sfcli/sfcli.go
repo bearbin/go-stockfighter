@@ -25,29 +25,20 @@ func main() {
 			Name:    "one",
 			Aliases: []string{"1"},
 			Usage:   "run the level 1 simulation",
-			Action: func(c *cli.Context) {
-				level1(c, api)
+			Action: func(c *cli.Context) error {
+				return level1(c, api)
 			},
 		},
 		{
 			Name:    "two",
 			Aliases: []string{"2"},
 			Usage:   "run the level 2 simulation",
-			Action: func(c *cli.Context) {
-				level2(c, api)
+			Action: func(c *cli.Context) error {
+				return level2(c, api)
 			},
 		},
 	}
 
 	// Run the application.
 	app.Run(os.Args)
-}
-
-// StartAndInitialiseLevel is a derp.
-func StartAndInitialiseLevel(api *sflib.Client, level string) (*sflib.LevelStartResponse, error) {
-	info, err := api.LevelStart("first_steps")
-	if err != nil {
-		return nil, err
-	}
-	return info, nil
 }
